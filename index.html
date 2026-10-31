@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>რუსთავის გზამკვლევი | Rustavi Guide</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cinzel:wght@400;600&family=Noto+Serif+Georgian:wght@300;400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        :root {
+            --bg-color: #f7f3ed;
+            --card-bg: #efe8de;
+            --accent-dark: #3c2a21;
+            --accent-warm: #8b5a2b;
+            --accent-muted: #d5c3b1;
+            --text-main: #2c1d11;
+            --text-light: #6e5d4f;
+            --border-color: #d8c8b8;
+            --white: #ffffff;
+            --shadow: 0 10px 30px rgba(60, 42, 33, 0.08);
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Serif Georgian', 'Montserrat', serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            background-image: radial-gradient(rgba(139, 90, 43, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+
+        header {
+            background-color: var(--accent-dark);
+            color: var(--bg-color);
+            padding: 3rem 1.5rem;
+            text-align: center;
+            position: relative;
+            border-bottom: 3px double var(--accent-warm);
+        }
+
+        header h1 {
+            font-family: 'Playfair Display', 'Noto Serif Georgian', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+            color: #f1e4d3;
+        }
+
+        header p {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--accent-muted);
+        }
+
+        .container {
+            max-width: 1250px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Top Controls: Search & Filters */
+        .controls-section {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 0.9rem 1.2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-color);
+            font-family: inherit;
+            font-size: 1rem;
+            color: var(--text-main);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-warm);
+            box-shadow: 0 0 0 3px rgba(139, 90, 43, 0.15);
+        }
+
+        .btn-add {
+            background: var(--accent-warm);
+            color: var(--white);
+            border: none;
+            padding: 0.9rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .btn-add:hover {
+            background: var(--accent-dark);
+        }
+
+        .categories-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+
+        .cat-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1.1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            transition: var(--transition);
+        }
+
+        .cat-btn.active, .cat-btn:hover {
+            background: var(--accent-dark);
+            color: var(--bg-color);
+            border-color: var(--accent-dark);
+        }
+
+        /* Content Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 2rem;
+        }
+
+        @media (max-width: 992px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(60, 42, 33, 0.12);
+        }
+
+        .card-img-wrap {
+            height: 180px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+            filter: sepia(15%);
+        }
+
+        .card:hover .card-img-wrap img {
+            transform: scale(1.05);
+            filter: sepia(0%);
+        }
+
+        .card-category {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(60, 42, 33, 0.85);
+            color: var(--bg-color);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-family: 'Montserrat', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(4px);
+        }
+
+        .fav-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: var(--transition);
+        }
+
+        .fav-btn.active {
+            color: #c0392b;
+        }
+
+        .card-body {
+            padding: 1.2rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-title {
+            font-family: 'Playfair Display', 'Noto Serif Georgian', serif;
+            font-size: 1.3rem;
+            margin-bottom: 0.4rem;
+            color: var(--accent-dark);
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            flex: 1;
+        }
+
+        .card-info {
+            font-size: 0.85rem;
+            color: var(--text-main);
+            border-top: 1px dashed var(--border-color);
+            padding-top: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .card-info i {
+            color: var(--accent-warm);
+            width: 18px;
+        }
+
+        /* Sticky Map Panel */
+        .map-panel {
+            position: sticky;
+            top: 2rem;
+            height: 550px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Modal Form */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(44, 29, 17, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            border: 2px solid var(--accent-warm);
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .modal h2 {
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 1rem;
+            color: var(--accent-dark);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: inherit;
+            background: var(--white);
+        }
+
+        footer {
+            margin-top: 4rem;
+            background: var(--accent-dark);
+            color: var(--accent-muted);
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--accent-warm);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>რუსთავის დირექტორია</h1>
+        <p>Rustavi City Guide & Aesthetic Map</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Search and Filter Controls -->
+        <div class="controls-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="მოძებნე ლოკაცია, მაღაზია ან კაფე რუსთავში...">
+                <button class="btn-add" id="openModalBtn">
+                    <i class="fa-solid fa-plus"></i> დამატება
+                </button>
+            </div>
+            
+            <div class="categories-nav" id="categoryButtons">
+                <button class="cat-btn active" data-cat="all">ყველა</button>
+                <button class="cat-btn" data-cat="cafe">კვება & კაფეები</button>
+                <button class="cat-btn" data-cat="shopping">ტანსაცმელი & მაღაზიები</button>
+                <button class="cat-btn" data-cat="culture">კულტურა & დასვენება</button>
+                <button class="cat-btn" data-cat="education">განათლება</button>
+                <button class="cat-btn" data-cat="health">ჯანმრთელობა</button>
+                <button class="cat-btn" data-cat="favorites"><i class="fa-solid fa-heart"></i> რჩეულები</button>
+            </div>
+        </div>
+
+        <!-- Main Layout: Cards + Map -->
+        <div class="main-layout">
+            <div class="cards-grid" id="cardsGrid">
+                <!-- Cards dynamically loaded via JS -->
+            </div>
+
+            <div class="map-panel">
+                <div id="map"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Form for Adding New Location -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModalBtn">&times;</span>
+            <h2>ლოკაციის დამატება</h2>
+            <form id="addLocationForm">
+                <div class="form-group">
+                    <label>ობიექტის დასახელება</label>
+                    <input type="text" id="locTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>კატეგორია</label>
+                    <select id="locCategory">
+                        <option value="cafe">კვება & კაფეები</option>
+                        <option value="shopping">ტანსაცმელი & მაღაზიები</option>
+                        <option value="culture">კულტურა & დასვენება</option>
+                        <option value="education">განათლება</option>
+                        <option value="health">ჯანმრთელობა</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>მისამართი</label>
+                    <input type="text" id="locAddress" required>
+                </div>
+                <div class="form-group">
+                    <label>სამუშაო საათები</label>
+                    <input type="text" id="locHours" placeholder="მაგ: 09:00 - 20:00">
+                </div>
+                <div class="form-group">
+                    <label>აღწერა</label>
+                    <textarea id="locDesc" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-add" style="width: 100%; justify-content: center;">გაგზავნა</button>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 რუსთავის ადგილობრივი გზამკვლევი. დამზადებულია სიყვარულით.</p>
+    </footer>
+
+    <!-- Leaflet JS for Map -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Rustavi Initial Data
+        const rustaviLocations = [
+            {
+                id: 1,
+                title: "რუსთავის ბოტანიკური ბაღი",
+                category: "culture",
+                categoryName: "კულტურა",
+                address: "მეგობრობის გამზირი, რუსთავი",
+                hours: "09:00 - 19:00",
+                desc: "მშვიდი და ესთეტიკური სივრცე სასეირნოდ, დასასვენებლად და ფოტოების გადასაღებად.",
+                lat: 41.5365,
+                lng: 44.9922,
+                image: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=600&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 2,
+                title: "რუსთავის დრამატული თეატრი",
+                category: "culture",
+                categoryName: "კულტურა",
+                address: "ფიროსმანის ქ. 7, რუსთავი",
+                hours: "10:00 - 18:00",
+                desc: "ქალაქის კულტურული ცენტრი საინტერესო სპექტაკლებითა და ისტორიული არქიტექტურით.",
+                lat: 41.5458,
+                lng: 45.0041,
+                image: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 3,
+                title: "Rustavi Vintage Cafe",
+                category: "cafe",
+                categoryName: "კაფე",
+                address: "შარტავას გამზ. 12, რუსთავი",
+                hours: "09:00 - 22:00",
+                desc: "მყუდრო გარემო, არომატული ყავა, გემრიელი დესერტები და ესთეტიკური ინტერიერი.",
+                lat: 41.5401,
+                lng: 44.9985,
+                image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 4,
+                title: "ცენტრალური ბიბლიოთეკა",
+                category: "education",
+                categoryName: "განათლება",
+                address: "ჟიული შარტავას მოედანი, რუსთავი",
+                hours: "10:00 - 18:00",
+                desc: "შესანიშნავი სივრცე წიგნების საკითხავად, მეცადინეობისა და მშვიდი სამუშაო გარემოსთვის.",
+                lat: 41.5420,
+                lng: 44.9950,
+                image: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=600&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 5,
+                title: "L'Aube Concept Store",
+                category: "shopping",
+                categoryName: "მაღაზია",
+                address: "კოსტავას ქ. 18, რუსთავი",
+                hours: "10:00 - 20:00",
+                desc: "დახვეწილი ტანსაცმლის, აქსესუარებისა და კოსმეტიკის ბუტიკი გამორჩეული სტილით.",
+                lat: 41.5482,
+                lng: 45.0080,
+                image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 6,
+                title: "ცენტრალური აფთიაქი",
+                category: "health",
+                categoryName: "ჯანმრთელობა",
+                address: "მეგობრობის გამზ. 5, რუსთავი",
+                hours: "24/7",
+                desc: "მედიკამენტებისა და თავის მოვლის საშუალებების ფართო ასორტიმენტი 24 საათის განმავლობაში.",
+                lat: 41.5388,
+                lng: 44.9900,
+                image: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?w=600&auto=format&fit=crop&q=80"
+            }
+        ];
+
+        let favorites = JSON.parse(localStorage.getItem('rustavi_favs')) || [];
+        let currentCategory = 'all';
+
+        // Initialize Leaflet Map centered on Rustavi
+        const map = L.map('map').setView([41.5430, 44.9970], 14);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        let markers = [];
+
+        // Render Cards
+        function renderCards(locations) {
+            const container = document.getElementById('cardsGrid');
+            container.innerHTML = '';
+
+            // Clear old map markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            if (locations.length === 0) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-light); padding: 2rem;">ლოკაცია ვერ მოიძებნა...</p>';
+                return;
+            }
+
+            locations.forEach(loc => {
+                const isFav = favorites.includes(loc.id);
+                
+                // Add Map Marker
+                const marker = L.marker([loc.lat, loc.lng])
+                    .addTo(map)
+                    .bindPopup(`<b>${loc.title}</b><br>${loc.address}`);
+                markers.push(marker);
+
+                // Create Card Element
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-img-wrap">
+                        <img src="${loc.image}" alt="${loc.title}">
+                        <span class="card-category">${loc.categoryName}</span>
+                        <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFav(${loc.id}, event)">
+                            <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="card-title">${loc.title}</h3>
+                        <p class="card-desc">${loc.desc}</p>
+                        <div class="card-info">
+                            <div><i class="fa-solid fa-location-dot"></i> ${loc.address}</div>
+                            <div><i class="fa-regular fa-clock"></i> ${loc.hours}</div>
+                        </div>
+                    </div>
+                `;
+
+                // Fly to location on card click
+                card.addEventListener('click', (e) => {
+                    if (!e.target.closest('.fav-btn')) {
+                        map.flyTo([loc.lat, loc.lng], 16, { duration: 1.5 });
+                        marker.openPopup();
+                    }
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        // Filter Function
+        function filterLocations() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = rustaviLocations.filter(loc => {
+                const matchesSearch = loc.title.toLowerCase().includes(query) || loc.desc.toLowerCase().includes(query) || loc.address.toLowerCase().includes(query);
+                
+                if (currentCategory === 'all') return matchesSearch;
+                if (currentCategory === 'favorites') return matchesSearch && favorites.includes(loc.id);
+                return matchesSearch && loc.category === currentCategory;
+            });
+
+            renderCards(filtered);
+        }
+
+        // Toggle Favorites
+        window.toggleFav = function(id, event) {
+            event.stopPropagation();
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(favId => favId !== id);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem('rustavi_favs', JSON.stringify(favorites));
+            filterLocations();
+        }
+
+        // Category Buttons Event Listeners
+        document.getElementById('categoryButtons').addEventListener('click', (e) => {
+            if (e.target.classList.contains('cat-btn')) {
+                document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentCategory = e.target.dataset.cat;
+                filterLocations();
+            }
+        });
+
+        // Search Input Listener
+        document.getElementById('searchInput').addEventListener('input', filterLocations);
+
+        // Modal Control
+        const modal = document.getElementById('addModal');
+        document.getElementById('openModalBtn').onclick = () => modal.style.display = 'flex';
+        document.getElementById('closeModalBtn').onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+        // Form Submit
+        document.getElementById('addLocationForm').onsubmit = (e) => {
+            e.preventDefault();
+            alert('მადლობა! თქვენი ლოკაციის განაცხადი მიღებულია.');
+            modal.style.display = 'none';
+            e.target.reset();
+        };
+
+        // Initial Render
+        renderCards(rustaviLocations);
+    </script>
+</body>
+</html>
